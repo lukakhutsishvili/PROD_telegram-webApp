@@ -4,6 +4,7 @@ import { axiosInstance } from "../api/apiClient";
 import { Context } from "../App";
 import {
   GET_DETAILS_BY_SCANNER,
+  ORDER_LIST,
   changeStatusesOfOrder,
 } from "../api/Constants";
 import { t } from "i18next";
@@ -18,6 +19,8 @@ const BarcodeScanner = () => {
   const [secRes, setSecRes] = useState<any>();
   const [manualCode, setManualCode] = useState("");
   const [restart, setRestart] = useState(false);
+  const { setRecieptTasks, setSendingTasks } = useContext(Context);
+  const [isFetchingTasks, setIsFetchingTasks] = useState(false);
 
   const sendGetRequest = async (trackingCode: string) => {
     try {
@@ -60,22 +63,18 @@ const BarcodeScanner = () => {
         );
 
         setSecRes(secResponse);
-        setIsModalOpen(true);
       } else if (status === "Accepted") {
         setOrderTrackingCodes({
           error: "This reestr is already in tasks",
         });
-        setIsModalOpen(true);
       } else {
         setOrderTrackingCodes({
           error: "Unexpected status: " + status,
         });
-        setIsModalOpen(true);
       }
     } catch (error) {
       console.error("Error fetching barcode details:", error);
       setOrderTrackingCodes({ error: "Failed to fetch details" });
-      setIsModalOpen(true); // Open modal even on error
     } finally {
       setIsLoading(false);
     }
@@ -96,6 +95,7 @@ const BarcodeScanner = () => {
           const scannedBarcode = result.getText();
           reader.current.reset();
           sendGetRequest(scannedBarcode);
+          setIsModalOpen(true);
         }
       }
     );
@@ -110,6 +110,45 @@ const BarcodeScanner = () => {
     if (manualCode.trim()) {
       sendGetRequest(manualCode.trim());
       setManualCode("");
+    }
+  };
+
+  const fetchRecieptTasks = async () => {
+    try {
+      const response = await axiosInstance.get(ORDER_LIST, {
+        params: {
+          tasklist_data: btoa(
+            JSON.stringify({
+              device_id: userInfo.device_id,
+              pickup_task: true,
+              status: ["Waiting", "Accepted", "Completed", "Canceled"],
+            })
+          ),
+        },
+      });
+      setRecieptTasks(response.data.response);
+    } catch (error) {
+      console.error("Error fetching receipt tasks:", error);
+    }
+  };
+
+  // Fetch sending tasks
+  const fetchSendingTasks = async () => {
+    try {
+      const response = await axiosInstance.get(ORDER_LIST, {
+        params: {
+          tasklist_data: btoa(
+            JSON.stringify({
+              device_id: userInfo.device_id,
+              pickup_task: false,
+              status: ["Waiting", "Accepted", "Completed", "Canceled"],
+            })
+          ),
+        },
+      });
+      setSendingTasks(response.data.response);
+    } catch (error) {
+      console.error("Error fetching sending tasks:", error);
     }
   };
 
@@ -143,7 +182,9 @@ const BarcodeScanner = () => {
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
             {isLoading ? (
-              <p className="mb-6 text-gray-700">{t("Loading...")}</p>
+              <div className="flex justify-center items-center mb-6">
+                <div className="w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              </div>
             ) : secRes && secRes.status ? (
               <h2 className="text-xl font-bold mb-4 text-green-600">
                 {t("Scan Successfully")}
@@ -163,13 +204,34 @@ const BarcodeScanner = () => {
             )}
 
             <button
-              onClick={() => {
-                setIsModalOpen(false);
-                setRestart(!restart);
+              onClick={async () => {
+                setIsFetchingTasks(true); // Start spinner
+                try {
+                  await fetchSendingTasks(); // Fetch sending tasks first
+                  await fetchRecieptTasks(); // Then fetch receipt tasks
+                } catch (error) {
+                  console.error("Error fetching tasks:", error);
+                } finally {
+                  setIsFetchingTasks(false); // Stop spinner
+                  setIsModalOpen(false);
+                  setRestart(!restart);
+                }
               }}
-              className="mt-6 w-full px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+              disabled={isFetchingTasks} // Disable button while fetching tasks
+              className={`mt-6 w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                isFetchingTasks
+                  ? "bg-gray-400 text-white cursor-not-allowed"
+                  : "bg-gray-500 hover:bg-gray-600 text-white"
+              }`}
             >
-              {t("Close")}
+              {isFetchingTasks ? (
+                <div className="flex justify-center items-center">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span className="ml-2">{t("Loading...")}</span>
+                </div>
+              ) : (
+                t("Close")
+              )}
             </button>
           </div>
         </div>
