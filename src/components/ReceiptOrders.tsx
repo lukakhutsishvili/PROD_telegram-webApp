@@ -55,13 +55,15 @@ const RecieptOrder = ({ status }: { status: string | null }) => {
       ? recieptTasks.filter((task: any) => task.Status === status)
       : recieptTasks;
 
-    if (searchTerm.trim()) {
-      tasks = tasks.filter(
-        (task: any) =>
-          task.tracking_code.includes(searchTerm) ||
-          task.client_phone.includes(searchTerm)
-      );
-    }
+      if (searchTerm.trim()) {
+        tasks = tasks.filter(
+          (task: any) =>
+            task.tracking_code.includes(searchTerm) ||
+            task.client_phone.includes(searchTerm)  ||
+            task.client_name.includes(searchTerm) ||
+            task.client_address.includes(searchTerm)
+        );
+      }
     return tasks;
   }, [status, recieptTasks, searchTerm]);
 

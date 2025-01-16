@@ -57,13 +57,15 @@ const Order = ({ status }: { status: string | null }) => {
       ? sendingTasks.filter((task: any) => task.Status === status)
       : sendingTasks;
 
-    if (searchTerm.trim()) {
-      tasks = tasks.filter(
-        (task: any) =>
-          task.tracking_code.includes(searchTerm) ||
-          task.client_phone.includes(searchTerm)
-      );
-    }
+      if (searchTerm.trim()) {
+        tasks = tasks.filter(
+          (task: any) =>
+            task.tracking_code.includes(searchTerm) ||
+            task.client_phone.includes(searchTerm)  ||
+            task.client_name.includes(searchTerm) ||
+            task.client_address.includes(searchTerm)
+        );
+      }
     return tasks;
   }, [status, sendingTasks, searchTerm]);
 
