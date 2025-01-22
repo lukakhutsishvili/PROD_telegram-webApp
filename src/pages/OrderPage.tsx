@@ -81,7 +81,7 @@ const OrderPage = () => {
         "Failed to update order status or fetch updated list:",
         error
       );
-    }finally {
+    } finally {
       setLoading(false); // Reset loading to false after the operation
     }
   };
@@ -110,9 +110,7 @@ const OrderPage = () => {
     } catch (error) {
       console.error("Failed to open phone link:", error);
       // Fallback to copy the phone number to clipboard
-      navigator.clipboard.writeText(phone).then(() => {
-        alert(t("Phone number copied to clipboard"));
-      });
+      navigator.clipboard.writeText(phone);
     }
   };
 
