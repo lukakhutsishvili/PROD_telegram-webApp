@@ -68,7 +68,7 @@ const OrderPage = () => {
       status: newStatus,
       orders: [id],
     };
-    setLoading(true);
+
     try {
       const response = await changeOrderStatus(params);
       console.log("Order status updated successfully:", response);
@@ -81,8 +81,6 @@ const OrderPage = () => {
         "Failed to update order status or fetch updated list:",
         error
       );
-    } finally {
-      setLoading(false); // Reset loading to false after the operation
     }
   };
 
@@ -97,20 +95,24 @@ const OrderPage = () => {
     }
   };
 
-  // const handlePhoneCall = (phone: string) => {
-  //   try {
-  //     // Check if the environment supports "tel:" links
-  //     if (true) {
-  //       // Use Telegram's method to open links if available
-  //       window.Telegram.WebApp.openLink(`tel:${phone}`);
-  //     } else {
-  //       // Use the standard `window.open` method as a fallback
-  //       window.open(`tel:${phone}`, "_self");
-  //     }
-  //   } catch (error) {
-  //     navigator.clipboard.writeText(phone);
-  //   }
-  // };
+  const handlePhoneCall = (phone: string) => {
+    try {
+      // Check if the environment supports "tel:" links
+      if (true) {
+        // Use Telegram's method to open links if available
+        window.Telegram.WebApp.openLink(`tel:${phone}`);
+      } else {
+        // Use the standard `window.open` method as a fallback
+        window.open(`tel:${phone}`, "_self");
+      }
+    } catch (error) {
+      console.error("Failed to open phone link:", error);
+      // Fallback to copy the phone number to clipboard
+      navigator.clipboard.writeText(phone).then(() => {
+        alert("Phone number copied to clipboard");
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white px-4 pt-24">
@@ -138,7 +140,7 @@ const OrderPage = () => {
         <div className="p-4 flex justify-between">
           <span>{t("phone")} :</span>
           <button
-            // onClick={() => handlePhoneCall(order.client_phone)}
+            onClick={() => handlePhoneCall(order.client_phone)}
             className="font-medium text-blue-500 underline"
           >
             {order.client_phone}
@@ -189,19 +191,9 @@ const OrderPage = () => {
               onClick={() => {
                 handleStatusChangeAndFetch("Accepted");
               }}
-              disabled={loading}
-              className={`bg-yellow-400 text-black ${
-                loading ? "cursor-not-allowed" : ""
-              }`}
+              className="bg-yellow-400 text-black"
             >
-              {loading ? (
-                <div className="flex items-center justify-center">
-                  <div className="w-4 h-4 border-2 border-t-2 border-t-transparent border-black rounded-full animate-spin"></div>
-                  <span className="ml-2">{t("loading")}</span>
-                </div>
-              ) : (
-                t("accept")
-              )}
+              {t("accept")}
             </Button>
           </div>
         )}
