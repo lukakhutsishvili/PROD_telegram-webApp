@@ -1,232 +1,264 @@
-import { useContext, useState } from "react";
-import { useParams } from "react-router-dom";
-import { Context } from "../App";
-import { changeOrderStatus } from "../api/requestHandlers";
-import { t } from "i18next";
+import { useParams, useLocation } from "react-router-dom";
+import useOrder from "../hooks/order page hooks/useOrder";
+import useOrderStatus from "../hooks/order page hooks/useOrderStatus";
+import useModal from "../hooks/order page hooks/useModal";
 import CancelModal from "../components/CancelModal";
 import ConfirmModal from "../components/ConfirmModal";
 import Button from "../components/Button";
-import { axiosInstance } from "../api/apiClient";
-import { ORDER_LIST } from "../api/Constants";
+import ConfimParcelScanner from "../components/ConfirmScanner";
+import { useState } from "react";
+import OrderWithComponents from "../components/order page components/OrderWithComponents";
+import SameClientsOrders from "../components/order page components/SameClientsOrders";
+import ComponentParcelError from "../components/ComponentParcelError";
+import { useTranslation } from "react-i18next";
 
 const OrderPage = () => {
   const { id } = useParams<{ id: string }>();
+  const { selectedOrdersList = [], differentAddressOrders = false } =
+    useLocation().state || {};
+  const [isScanning, setIsScanning] = useState(false);
   const {
-    sendingTasks,
-    recieptTasks,
-    userInfo,
-    setSendingTasks,
-    navbarButtons,
-    setRecieptTasks,
-  } = useContext(Context);
+    setSelectedOrders,
+    selectedOrders,
+    totalSum,
+    totalQuantity,
+    handleCheckboxChange,
+  } = useOrder(selectedOrdersList);
+  const {
+    order,
+    sendingOrder,
+    receiptOrder,
+    loading,
+    handleStatusChangeAndFetch,
+    handleRecoveryClick,
+  } = useOrderStatus(id!);
+  const {
+    isModalOpen,
+    isConfirmModalOpen,
+    openCancellationModal,
+    closeCancellationModal,
+    openConfirmModal,
+    closeConfirmModal,
+    openComponentParcelErrorModal,
+    closeComponentParcelErrorModal,
+    componentParcelErrorModal,
+  } = useModal();
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  const openCancellationModal = () => setIsModalOpen(true);
-  const closeCancellationModal = () => setIsModalOpen(false);
-
-  const openConfirmModal = () => setIsConfirmModalOpen(true);
-  const closeConfirmModal = () => setIsConfirmModalOpen(false);
-
-  const sendingOrder = sendingTasks.find((task) => task.tracking_code === id);
-  const receiptOrder = recieptTasks.find((task) => task.tracking_code === id);
-
-  const order = sendingOrder || receiptOrder;
+  const { t } = useTranslation();
 
   if (!order) {
     return <div className="p-4">{t("Order not found")}</div>;
   }
 
-  const fetchUpdatedOrderList = async () => {
-    try {
-      const tasklistData = {
-        device_id: userInfo.device_id,
-        pickup_task: navbarButtons !== "sending",
-        status: ["Waiting", "Accepted", "Completed", "Canceled"],
-      };
-      const response = await axiosInstance.get(ORDER_LIST, {
-        params: {
-          tasklist_data: btoa(JSON.stringify(tasklistData)),
-        },
-      });
-      if (navbarButtons == "sending") {
-        setSendingTasks(response.data.response);
-      } else {
-        setRecieptTasks(response.data.response);
-      }
-      console.log("Order list updated successfully:", response);
-    } catch (error) {
-      console.error("Failed to fetch order list:", error);
-    }
+  const path = location.pathname;
+  const orderId = path.split("/").pop();
+
+  const matchedOrder = selectedOrdersList.find(
+    (order: any) =>
+      order.tracking_code === orderId && order.places && order.places.length > 0
+  );
+  const allTrue = Object.values(selectedOrders).every(
+    (value) => value === true
+  );
+
+  const handleScanerChange = () => {
+    setIsScanning(!isScanning);
   };
-
-  const handleStatusChangeAndFetch = async (newStatus: string) => {
-    const params = {
-      device_id: userInfo.device_id,
-      status: newStatus,
-      orders: [id],
-    };
-    setLoading(true);
-    try {
-      const response = await changeOrderStatus(params);
-      console.log("Order status updated successfully:", response);
-
-      // Wait for the status update to complete before fetching the updated list
-      await fetchUpdatedOrderList();
-      window.history.back();
-    } catch (error: any) {
-      console.error(
-        "Failed to update order status or fetch updated list:",
-        error
-      );
-    } finally {
-      setLoading(false); // Reset loading to false after the operation
-    }
-  };
-
-  const handleRecoveryClick = async () => {
-    setLoading(true); // Set loading to true before the async operation
-    try {
-      await handleStatusChangeAndFetch("Accepted"); // Perform the async action
-    } catch (error) {
-      console.error("Recovery failed:", error);
-    } finally {
-      setLoading(false); // Reset loading to false after the operation
-    }
-  };
-
-
   return (
-    <div className="min-h-screen bg-white px-4 pt-24">
-      {/* Header */}
-      <header className="flex items-center mb-6">
-        <button
-          onClick={() => window.history.back()}
-          className="text-gray-500 text-4xl"
-        >
-          <span>&larr;</span>
-        </button>
-        <h1 className="text-lg font-bold mx-auto">{t("order details")}</h1>
-      </header>
-
-      {/* Order Details */}
-      <div className="border rounded-lg divide-y divide-gray-200 text-gray-700">
-        <div className="p-4 flex justify-between">
-          <span>{t("name")} :</span>
-          <span className="font-medium">{order.client_name}</span>
-        </div>
-        <div className="p-4 flex justify-between">
-          <span>{t("address")}:</span>
-          <span className="font-medium text-right">{order.client_address}</span>
-        </div>
-        <div className="p-4 flex justify-between">
-          <span>{t("phone")} :</span>
-          <span
-            onClick={() => navigator.clipboard.writeText(order.client_phone)}
-            className="font-medium text-blue-500 underline cursor-pointer"
-          >
-            {order.client_phone}
-          </span>
-        </div>
-
-        <div className="p-4 flex justify-between">
-          <span>{t("barcode")} :</span>
-          <span
-            onClick={() => navigator.clipboard.writeText(order.tracking_code)}
-            className="font-medium text-blue-500 underline cursor-pointer"
-          >
-            {order.tracking_code}
-          </span>
-        </div>
-        <div className="p-4 flex justify-between">
-          <span>{t("sum")} :</span>
-          <span className="font-medium">{order.sum} ₾</span>
-        </div>
-        <div className="p-4 flex justify-between">
-          <span>{t("status")} :</span>
-          <span className="font-medium">{order.Status}</span>
-        </div>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="flex justify-center p-8">
-        {order.Status === "Accepted" && (
-          <div className="flex space-x-4">
-            <Button
-              onClick={openConfirmModal}
-              className="bg-yellow-400 text-black"
-            >
-              {t("hand over")}
-            </Button>
-            <Button
-              onClick={openCancellationModal}
-              className="bg-yellow-400 text-black"
-            >
-              {t("cancellation")}
-            </Button>
-          </div>
-        )}
-
-        {order.Status === "Waiting" && (
-          <div className="flex space-x-4">
-            <Button
-              onClick={() => {
-                handleStatusChangeAndFetch("Accepted");
-              }}
-              disabled={loading}
-              className={`bg-yellow-400 text-black ${
-                loading ? "cursor-not-allowed" : ""
-              }`}
-            >
-              {loading ? (
-                <div className="flex items-center justify-center">
-                  <div className="w-4 h-4 border-2 border-t-2 border-t-transparent border-black rounded-full animate-spin"></div>
-                  <span className="ml-2">{t("loading")}</span>
-                </div>
-              ) : (
-                t("accept")
-              )}
-            </Button>
-          </div>
-        )}
-        {order.Status === "Canceled" && (
-          <div className="flex space-x-4">
-            <Button
-              onClick={handleRecoveryClick}
-              disabled={loading} // Disable button while loading
-              className={`bg-yellow-400 text-black ${
-                loading ? "cursor-not-allowed" : ""
-              }`}
-            >
-              {loading ? (
-                <div className="flex items-center justify-center">
-                  <div className="w-4 h-4 border-2 border-t-2 border-t-transparent border-black rounded-full animate-spin"></div>
-                  <span className="ml-2">{t("loading")}</span>
-                </div>
-              ) : (
-                t("recovery")
-              )}
-            </Button>
-          </div>
-        )}
-      </div>
-
-      {/* Modal for Cancellation Reasons */}
-      {isModalOpen && (
-        <CancelModal
-          order={order}
-          closeCancellationModal={closeCancellationModal}
-          sendingOrder={sendingOrder}
+    <div className="min-h-screen bg-white px-4 pt-24 h-sm:pt-12">
+      {isScanning ? (
+        <ConfimParcelScanner
+          selectedOrdersList={selectedOrdersList}
+          selectedOrders={selectedOrders}
+          setSelectedOrders={setSelectedOrders}
+          setIsScanning={setIsScanning}
         />
-      )}
-      {isConfirmModalOpen && (
-        <ConfirmModal
-          closeModal={closeConfirmModal}
-          sendingOrder={sendingOrder}
-          receiptOrder={receiptOrder}
-        />
+      ) : (
+        <>
+          {/* Header */}
+          <header className="flex items-center mb-6">
+            <button
+              onClick={() => window.history.back()}
+              className="text-gray-500 text-4xl"
+            >
+              <span>&larr;</span>
+            </button>
+            <h1 className="text-lg font-bold mx-auto">{t("order details")}</h1>
+          </header>
+
+          {/* Order Details */}
+          <div className="border rounded-lg divide-y divide-gray-200 text-gray-700">
+            <div className="p-1 flex justify-between">
+              <span className="font-base text-sm">{t("name")} :</span>
+              <span className="font-base">{order.client_name}</span>
+            </div>
+
+            {(order.Status !== "Accepted" || order?.places) && (
+              <div className="p-1 flex justify-between">
+                <span className="font-base text-sm">{t("barcode")} :</span>
+                <span
+                  onClick={() =>
+                    navigator.clipboard.writeText(order.tracking_code)
+                  }
+                  className="text-sm text-blue-500 underline cursor-pointer"
+                >
+                  {order.tracking_code}
+                </span>
+              </div>
+            )}
+            <div className="p-1 flex justify-between">
+              <span className="font-base text-sm">{t("address")}:</span>
+              <span className="font-base text-right">
+                {order.client_address}
+              </span>
+            </div>
+            <div className="p-1 flex justify-between">
+              <span className="font-base text-sm">{t("phone")} :</span>
+
+              <span
+                onClick={() =>
+                  window.open(`tel:${order.client_phone}`, "_blank")
+                }
+                className="font-base text-blue-500 underline cursor-pointer"
+              >
+                {order.client_phone}
+              </span>
+            </div>
+            {(order.Status !== "Accepted" || order?.places) && (
+              <div className="p-1 flex justify-between">
+                <span className="font-base text-sm">{t("sum")} :</span>
+                <span className="font-base text-sm">{order.sum} ₾</span>
+              </div>
+            )}
+            <div className="p-1 flex justify-between">
+              <span className="font-base text-sm">{t("status")} :</span>
+              <span className="font-base">{order.Status}</span>
+            </div>
+          </div>
+
+          {order?.places ? (
+            <OrderWithComponents
+              order={order}
+              handleCheckboxChange={handleCheckboxChange}
+              selectedOrders={selectedOrders}
+            />
+          ) : (
+            <SameClientsOrders
+              selectedOrdersList={selectedOrdersList}
+              differentAddressOrders={differentAddressOrders}
+              handleCheckboxChange={handleCheckboxChange}
+              selectedOrders={selectedOrders}
+            />
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex justify-center p-5">
+            {order.Status === "Accepted" && (
+              <div className="flex flex-col gap-2">
+                <div className="p-1 flex justify-between">
+                  <span>{t("Total quantity")} :</span>
+                  <span className="font-medium">{totalQuantity}</span>
+                </div>
+                <div className="p-1 flex justify-between">
+                  <span>{t("Total amount")} :</span>
+                  <span className="font-medium">{totalSum} ₾</span>
+                </div>
+                <div className="flex space-x-4">
+                  <Button
+                    onClick={() => {
+                      if ((matchedOrder && allTrue) || !matchedOrder) {
+                        openConfirmModal();
+                      } else {
+                        openComponentParcelErrorModal();
+                      }
+                    }}
+                    className="bg-yellow-400 text-black"
+                  >
+                    {t("hand over")}
+                  </Button>
+                  <Button
+                    onClick={openCancellationModal}
+                    className="bg-yellow-400 text-black"
+                  >
+                    {t("cancellation")}
+                  </Button>
+                </div>
+                <Button onClick={handleScanerChange}>
+                  {t("scan barcode")}
+                </Button>
+              </div>
+            )}
+
+            {order.Status === "Waiting" && (
+              <div className="flex space-x-4">
+                <Button
+                  onClick={() => {
+                    handleStatusChangeAndFetch("Accepted");
+                  }}
+                  disabled={loading}
+                  className={`bg-yellow-400 text-black ${
+                    loading ? "cursor-not-allowed" : ""
+                  }`}
+                >
+                  {loading ? (
+                    <div className="flex items-center justify-center">
+                      <div className="w-4 h-4 border-2 border-t-2 border-t-transparent border-black rounded-full animate-spin"></div>
+                      <span className="ml-2">{t("loading")}</span>
+                    </div>
+                  ) : (
+                    t("accept")
+                  )}
+                </Button>
+              </div>
+            )}
+            {order.Status === "Canceled" && (
+              <div className="flex space-x-4">
+                <Button
+                  onClick={handleRecoveryClick}
+                  disabled={loading} // Disable button while loading
+                  className={`bg-yellow-400 text-black ${
+                    loading ? "cursor-not-allowed" : ""
+                  }`}
+                >
+                  {loading ? (
+                    <div className="flex items-center justify-center">
+                      <div className="w-4 h-4 border-2 border-t-2 border-t-transparent border-black rounded-full animate-spin"></div>
+                      <span className="ml-2">{t("loading")}</span>
+                    </div>
+                  ) : (
+                    t("recovery")
+                  )}
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Modal for Cancellation Reasons */}
+          {isModalOpen && (
+            <CancelModal
+              order={order}
+              closeCancellationModal={closeCancellationModal}
+              sendingOrder={sendingOrder}
+              selectedOrders={selectedOrders}
+              selectedOrdersList={selectedOrdersList}
+            />
+          )}
+          {isConfirmModalOpen && (
+            <ConfirmModal
+              closeModal={closeConfirmModal}
+              sendingOrder={sendingOrder}
+              receiptOrder={receiptOrder}
+              selectedOrders={selectedOrders}
+              totalSum={String(totalSum)}
+              selectedOrdersList={selectedOrdersList}
+            />
+          )}
+          {componentParcelErrorModal && (
+            <ComponentParcelError
+              closeComponentParcelErrorModal={closeComponentParcelErrorModal}
+            />
+          )}
+        </>
       )}
     </div>
   );

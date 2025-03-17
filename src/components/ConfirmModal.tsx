@@ -1,45 +1,96 @@
-import { useContext, useState, useEffect } from "react";
+import { useContext, useEffect, useState } from "react";
 import Button from "../components/Button";
-import {
-  DELIVERY_ORDERS,
-  ORDER_LIST,
-  PICKUP_ORDERS,
-  SEND_CLIENT_OTP,
-  SET_CLIENT_ID_URL,
-  VERIFY_CLIENT_OTP_URL,
-} from "../api/Constants";
+import { CHECK_OTP_CONFIRMATION } from "../api/Constants";
 import { axiosInstance } from "../api/apiClient";
-import { Context } from "../App";
 import { t } from "i18next";
 import { useNavigate } from "react-router-dom";
+import useClientConfirmation from "../hooks/confirm modal hooks/useClientConfirmation";
+import useRequestLogs from "../hooks/useRequestLogs";
+import ThirdPerson from "./ThirdPerson";
+import { Context } from "../App";
 
 interface ConfirmModalProps {
   closeModal: () => void;
   receiptOrder: any;
   sendingOrder: any;
+  selectedOrders: { [key: string]: boolean };
+  totalSum: string;
+  selectedOrdersList: {
+    tracking_code: string;
+    sum: number;
+    places?: { tracking_code: string }[];
+  }[];
 }
 
 const ConfirmModal: React.FC<ConfirmModalProps> = ({
   closeModal,
   receiptOrder,
+  selectedOrders,
   sendingOrder,
+  totalSum,
+  selectedOrdersList,
 }) => {
-  const [paymentMethod, setPaymentMethod] = useState<string | null>("Cash");
-  const [confirmationMethod, setConfirmationMethod] = useState("OTP");
-  const [confirmationValue, setConfirmationValue] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [isOtpSending, setIsOtpSending] = useState(false);
-  const [otpCooldown, setOtpCooldown] = useState(0); // Cooldown timer for OTP
-  const [confirmationMessage, setConfirmationMessage] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
-  const [timer, setTimer] = useState(2);
-  const [startTimer, setStartTimer] = useState(false);
-  const { userInfo, setSendingTasks, setRecieptTasks, navbarButtons } =
-    useContext(Context);
   const navigate = useNavigate();
-  const [loading, setLoading] = useState<boolean>(false);
-
+  const PARCELS_KEY = "parcels";
+  const storedParcels = JSON.parse(localStorage.getItem(PARCELS_KEY) || "[]");
   const order = sendingOrder || receiptOrder;
+
+  const { addParcel } = useRequestLogs();
+
+  const {
+    paymentMethod,
+    setPaymentMethod,
+    confirmationMethod,
+    confirmationValue,
+    setConfirmationValue,
+    otpSent,
+    isOtpSending,
+    otpCooldown,
+    setOtpCooldown,
+    confirmationMessage,
+    errorMessage,
+    timer,
+    setTimer,
+    startTimer,
+    loading,
+    handleConfirmationMethodChange,
+    sendOtp,
+    confirmDelivery,
+    setLoading,
+    postClientID,
+    setConfirmationMessage,
+    setStartTimer,
+    fetchUpdatedOrderList,
+    checkClientOtp,
+    setErrorMessage,
+    checkOtherClient,
+    addOtherClient,
+    otherPersonInfo,
+    otherClientName,
+    otherClientSurname,
+    setOtherClientName,
+    setOtherClientSurname,
+    connection,
+    setConnection,
+    additionalComment,
+    setAdditionalComment,
+    openThirdPersonModal,
+  } = useClientConfirmation(
+    selectedOrders,
+    totalSum,
+    sendingOrder,
+    receiptOrder,
+    selectedOrdersList
+  );
+
+  const initialState = {
+    otherClientName: "",
+    otherClientSurname: "",
+    connection: "",
+    additionalComment,
+  };
+  const [errors, setErrors] = useState(initialState);
+  const { userInfo } = useContext(Context);
 
   const navigationfunction = () => {
     if (confirmationMessage) {
@@ -50,6 +101,26 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
       }
     }
   };
+
+  useEffect(() => {
+    const getOtp = async () => {
+      try {
+        const response = await axiosInstance.get(CHECK_OTP_CONFIRMATION, {
+          params: {
+            telegram_id: userInfo.telegram_id,
+            tracking_code: order.tracking_code,
+          },
+        });
+        if (response.data.response.otp_confirmed) {
+          const parcel = storedParcels.find(
+            (parcel: any) => parcel.trackingNumber == order.tracking_code
+          );
+          setConfirmationValue(parcel.idOrOtp);
+        }
+      } catch (error) {}
+    };
+    getOtp();
+  }, []);
 
   useEffect(() => {
     if (startTimer) {
@@ -78,166 +149,43 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
     }
   }, [otpCooldown]);
 
-  const handleConfirmationMethodChange = (method: string) => {
-    setConfirmationMethod(method);
-    setConfirmationValue("");
-    setOtpSent(false);
-    setOtpCooldown(0);
-    setConfirmationMessage("");
-    setErrorMessage("");
-  };
-
-  const confirmDelivery = async () => {
-    const params = {
-      device_id: userInfo.device_id,
-      payment_type: order.sum == 0 ? null : paymentMethod,
-      orders: [
-        {
-          tracking_code: order.tracking_code,
-          successfully: "True",
-          reason_id: "",
-          reason_commentary: "",
-        },
-      ],
-    };
-
-    try {
-      const url = order == receiptOrder ? PICKUP_ORDERS : DELIVERY_ORDERS;
-      await axiosInstance.post(url, params);
-      console.log("Request sent successfully to:", url);
-    } catch (error) {
-      console.error("Error sending request:", error);
-    }
-  };
-
-  const sendOtp = async () => {
-    if (!order.client_phone) {
-      alert(t("Phone number is not available."));
-      return;
-    }
-
-    try {
-      setIsOtpSending(true);
-      const response = await axiosInstance.post(SEND_CLIENT_OTP, {
-        device_id: userInfo.device_id,
-        tracking_code: order.tracking_code,
-      });
-      if (response.status === 200) {
-        setOtpSent(true);
-        setOtpCooldown(30);
-      } else {
-        alert(response.data.message || t("Failed to send OTP."));
-      }
-    } catch (error) {
-      alert(t("Error sending OTP."));
-    } finally {
-      setIsOtpSending(false);
-    }
-  };
-
-  const fetchUpdatedOrderList = async () => {
-    try {
-      const tasklistData = {
-        device_id: userInfo.device_id,
-        pickup_task: navbarButtons !== "sending",
-        status: ["Waiting", "Accepted", "Completed", "Canceled"],
-      };
-      const response = await axiosInstance.get(ORDER_LIST, {
-        params: {
-          tasklist_data: btoa(JSON.stringify(tasklistData)),
-        },
-      });
-      if (navbarButtons == "sending") {
-        setSendingTasks(response.data.response);
-      } else {
-        setRecieptTasks(response.data.response);
-      }
-      console.log("Order list updated successfully:", response);
-    } catch (error) {
-      console.error("Failed to fetch order list:", error);
-    }
-  };
-
-  const checkClientOtp = async () => {
-    if (!confirmationValue) {
-      setErrorMessage(t("Please enter the OTP."));
-      return;
-    }
-
-    const data = {
-      device_id: userInfo.device_id,
-      tracking_code: order.tracking_code,
-      otp: confirmationValue,
-    };
-
-    try {
-      const response = await axiosInstance.post(VERIFY_CLIENT_OTP_URL, data);
-
-      if (response.status === 200) {
-        await confirmDelivery();
-        setConfirmationMessage(t("OTP confirmed!"));
-        setErrorMessage("");
-        setStartTimer(true);
-      } else {
-        setErrorMessage(
-          response.data.message || t("Invalid OTP. Please try again.")
-        );
-      }
-    } catch (error: any) {
-      setErrorMessage(
-        error.response?.data?.message || t("Invalid OTP. Please try again.")
-      );
-    }
-  };
-
-  const postClientID = async () => {
-    if (!confirmationValue.trim()) {
-      setErrorMessage(t("Please enter the ID number."));
-      return;
-    }
-
-    const params = {
-      device_id: userInfo.device_id,
-      client_code: order.client_code,
-      client_id: confirmationValue,
-    };
-
-    try {
-      const response = await axiosInstance.post(SET_CLIENT_ID_URL, params);
-      if (response.status === 202) {
-        await confirmDelivery();
-        setConfirmationMessage(t("ID Number confirmed!"));
-        setErrorMessage("");
-        setStartTimer(true);
-      } else {
-        setErrorMessage(
-          response.data.message ||
-            t("Failed to save ID Number. Please try again.")
-        );
-      }
-    } catch (error: any) {
-      setErrorMessage(
-        error.response?.data?.message ||
-          t("An error occurred while saving the ID Number. Please try again.")
-      );
-    }
-  };
-
   const onConfirm = async () => {
     setLoading(true);
     try {
       if (receiptOrder) {
         await confirmDelivery();
+        addParcel(
+          order.tracking_code,
+          confirmationValue,
+          order.client_name,
+          "completed"
+        );
         setConfirmationMessage(t("Receipt order confirmed!"));
         setStartTimer(true);
         await fetchUpdatedOrderList();
       } else if (confirmationMethod === "OTP") {
-        await checkClientOtp();
+        try {
+          await checkClientOtp();
+        } catch (error) {
+          addParcel(
+            order.tracking_code,
+            confirmationValue,
+            order.client_name,
+            "failed"
+          );
+          console.log(error);
+        }
         await fetchUpdatedOrderList();
       } else if (confirmationMethod === "ID Number") {
         if (order.client_id) {
           if (order.client_id === confirmationValue) {
             await confirmDelivery();
+            addParcel(
+              order.tracking_code,
+              confirmationValue,
+              order.client_name,
+              "completed"
+            );
             setConfirmationMessage(t("ID Number confirmed!"));
             setStartTimer(true);
             await fetchUpdatedOrderList();
@@ -247,9 +195,57 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 "The ID Number does not match the client's ID. Please try again."
               )
             );
+            addParcel(
+              order.tracking_code,
+              confirmationValue,
+              order.client_name,
+              "failed"
+            );
           }
         } else {
-          await postClientID();
+          try {
+            await postClientID();
+          } catch (error) {
+            addParcel(
+              order.tracking_code,
+              confirmationValue,
+              order.client_name,
+              "failed"
+            );
+          }
+          await fetchUpdatedOrderList();
+        }
+      } else if (confirmationMethod === "Other") {
+        if (otherPersonInfo) {
+          if (errors.connection !== "" || errors.additionalComment !== "") {
+            setErrorMessage(t("Input relationship type"));
+            return;
+          }
+          await confirmDelivery();
+          addParcel(
+            order.tracking_code,
+            confirmationValue,
+            order.client_name,
+            "completed"
+          );
+          setConfirmationMessage(t("Other person confirmed!"));
+          setStartTimer(true);
+          await fetchUpdatedOrderList();
+        } else {
+          await addOtherClient(otherClientName, otherClientSurname);
+          if (errors.connection !== "" || errors.additionalComment !== "") {
+            setErrorMessage(t("Input relationship type"));
+            return;
+          }
+          await confirmDelivery();
+          addParcel(
+            order.tracking_code,
+            confirmationValue,
+            order.client_name,
+            "completed"
+          );
+          setConfirmationMessage(t("Other person posted!"));
+          setStartTimer(true);
           await fetchUpdatedOrderList();
         }
       }
@@ -257,6 +253,12 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
       console.error("An error occurred:", error);
       setErrorMessage(
         t("An unexpected error occurred. Please try again later.")
+      );
+      addParcel(
+        order.tracking_code,
+        confirmationValue,
+        order.client_name,
+        "failed"
       );
     } finally {
       setLoading(false);
@@ -281,25 +283,26 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
           </div>
         ) : (
           <>
-            {order.sum != 0 && (
+            {(order.sum != 0 || parseFloat(totalSum) != 0) && (
               <div className="mb-4">
-                <label className="block font-medium mb-2">
+                <label className="block text-xs font-medium mb-2">
                   {t("Payment Method")}
                 </label>
                 <select
                   value={paymentMethod ?? ""}
                   onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-full p-2 border rounded"
+                  className="w-full p-2 border rounded text-xs"
                 >
                   <option value="Cash">{t("Cash")}</option>
                   <option value="bank_card">{t("Bank")}</option>
                 </select>
               </div>
             )}
+
             {sendingOrder && (
               <>
                 <div className="mb-4">
-                  <label className="block font-medium mb-2">
+                  <label className="block font-medium mb-2 text-xs">
                     {t("Confirmation Method")}
                   </label>
                   <select
@@ -307,23 +310,19 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
                     onChange={(e) =>
                       handleConfirmationMethodChange(e.target.value)
                     }
-                    className="w-full p-2 border rounded"
+                    className="w-full p-2 border rounded text-xs"
                   >
                     <option value="OTP">{t("OTP")}</option>
                     <option value="ID Number">{t("ID Number")}</option>
+                    <option value="Other">{t("Other Person")}</option>
                   </select>
                 </div>
 
                 <div className="mb-4">
-                  <label className="block font-medium mb-2">
-                    {confirmationMethod === "OTP"
-                      ? t("Enter OTP Code")
-                      : t("Enter ID Number")}
-                  </label>
                   {confirmationMethod === "OTP" && (
                     <Button
                       onClick={sendOtp}
-                      className="mb-2 bg-blue-500 text-black"
+                      className="mb-2 bg-blue-500 text-black text-xs"
                       disabled={otpCooldown > 0 || isOtpSending}
                     >
                       {isOtpSending
@@ -333,14 +332,20 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
                         : t("Send OTP")}
                     </Button>
                   )}
+
                   {otpSent && (
                     <div className="text-green-500">{t("OTP Sent!")}</div>
                   )}
+                  <label className="block font-medium mb-2 text-xs">
+                    {confirmationMethod === "OTP"
+                      ? t("Enter OTP Code")
+                      : t("Enter ID Number")}
+                  </label>
                   <input
                     type="text"
                     value={confirmationValue}
                     onChange={(e) => setConfirmationValue(e.target.value)}
-                    className="w-full p-2 border rounded"
+                    className="w-full p-2 border rounded text-xs"
                     placeholder={
                       confirmationMethod === "OTP"
                         ? t("OTP Code")
@@ -348,7 +353,32 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
                     }
                   />
                   {errorMessage && (
-                    <div className="text-red-500">{errorMessage}</div>
+                    <div className="text-red-500 text-xs mt-1">
+                      {errorMessage}
+                    </div>
+                  )}
+                  {confirmationMethod === "Other" && (
+                    <Button
+                      onClick={checkOtherClient}
+                      className="mb-2 mt-2 text-xs text-black"
+                    >
+                      {t("Check Client")}
+                    </Button>
+                  )}
+                  {openThirdPersonModal && (
+                    <ThirdPerson
+                      otherClientName={otherClientName}
+                      otherClientSurname={otherClientSurname}
+                      setOtherClientName={setOtherClientName}
+                      setOtherClientSurname={setOtherClientSurname}
+                      connection={connection}
+                      additionalComment={additionalComment}
+                      setConnection={setConnection}
+                      setAdditionalComment={setAdditionalComment}
+                      errors={errors}
+                      setErrors={setErrors}
+                      otherPersonInfo={otherPersonInfo}
+                    />
                   )}
                 </div>
               </>

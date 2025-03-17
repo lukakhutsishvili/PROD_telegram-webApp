@@ -8,6 +8,7 @@ import {
   changeStatusesOfOrder,
 } from "../api/Constants";
 import { t } from "i18next";
+import { useNavigate } from "react-router-dom";
 
 const BarcodeScanner = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -21,12 +22,62 @@ const BarcodeScanner = () => {
   const [restart, setRestart] = useState(false);
   const { setRecieptTasks, setSendingTasks } = useContext(Context);
   const [isFetchingTasks, setIsFetchingTasks] = useState(false);
+  const navigate = useNavigate();
+  const { sendingTasks, recieptTasks } = useContext(Context);
+  const [scanerError, setScannerError] = useState("");
+
+  const activeStatus = "Accepted";
+
+  const handleConfirmAllTasks = (trackingCode: string) => {
+    const task =
+      sendingTasks.find((task) => task.tracking_code === trackingCode) ||
+      recieptTasks.find((task) => task.tracking_code === trackingCode);
+
+    if (!task) {
+      console.warn(`Order with tracking code ${trackingCode} not found`);
+      return;
+    }
+
+    // Use the selected order's address as the main address
+    const mainAddress = task.client_address;
+
+    // Find all orders with the same phone number and status
+    const samePhoneTasks = [...sendingTasks, ...recieptTasks].filter(
+      (order) =>
+        order.client_phone === task.client_phone &&
+        order.Status === activeStatus
+    );
+
+    // Separate same-address and different-address orders
+    const sameAddressOrders = samePhoneTasks.filter(
+      (order) =>
+        order.client_address === mainAddress &&
+        order.tracking_code !== trackingCode
+    );
+    const differentAddressOrders = samePhoneTasks.filter(
+      (order) => order.client_address !== mainAddress
+    );
+
+    // Ensure the selected order is first in the array
+    const selectedOrdersList = [
+      task,
+      ...sameAddressOrders,
+      ...differentAddressOrders,
+    ];
+    const newPath = window.location.pathname.replace("/scanner", "");
+    navigate(`${newPath}/order/${trackingCode}`, {
+      state: {
+        selectedOrdersList,
+        differentAddressOrders,
+      },
+    });
+  };
 
   const sendGetRequest = async (trackingCode: string) => {
     try {
       setIsLoading(true);
       const requestData = {
-        device_id: userInfo.device_id,
+        device_id: userInfo.device_id ,
         tracking_code: trackingCode,
       };
 
@@ -43,12 +94,18 @@ const BarcodeScanner = () => {
       const firstResponseData = response.data.response.value;
       const status = firstResponseData.status;
 
+      if (response.data.response.type == "parcel") {
+        handleConfirmAllTasks(firstResponseData.tracking_code);
+        return;
+      }
+
       if (status === "Waiting") {
         const trackingCodes = firstResponseData.tracking_codes.map(
           (item: { tracking_code: string }) => item.tracking_code
         );
 
         setOrderTrackingCodes(trackingCodes);
+        console.log(trackingCode);
 
         const orderParams = {
           device_id: userInfo.device_id,
@@ -63,20 +120,18 @@ const BarcodeScanner = () => {
         );
 
         setSecRes(secResponse);
+        setScannerError("");
       } else if (status === "Accepted") {
-        setOrderTrackingCodes({
-          error: "This reestr is already in tasks",
-        });
+        setScannerError("This reestr is already in tasks");
       } else {
-        setOrderTrackingCodes({
-          error: "Unexpected status: " + status,
-        });
+        setScannerError("Unexpected status: " + status);
       }
     } catch (error) {
       console.error("Error fetching barcode details:", error);
-      setOrderTrackingCodes({ error: "Failed to fetch details" });
+      setScannerError("Failed to fetch details");
     } finally {
       setIsLoading(false);
+      console.log(orderTrackingCodes);
     }
   };
 
@@ -186,21 +241,20 @@ const BarcodeScanner = () => {
                 <div className="w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
               </div>
             ) : secRes && secRes.status ? (
-              <h2 className="text-xl font-bold mb-4 text-green-600">
-                {t("Scan Successfully")}
-              </h2>
-            ) : orderTrackingCodes && orderTrackingCodes.error ? (
+              <div>
+                <h2 className="text-xl font-bold mb-4 text-green-600">
+                  {t("Scan Successfully")}
+                </h2>
+                <p className="text-gray-700">
+                  {t("Total Parcels in Register")}: {orderTrackingCodes.length}
+                </p>
+              </div>
+            ) : scanerError ? (
               <h2 className="text-xl font-bold mb-4 text-red-600">
-                {orderTrackingCodes.error}
+                {scanerError}
               </h2>
             ) : (
               <p className="mb-6 text-gray-700">{t("No details available")}</p>
-            )}
-
-            {secRes && secRes.status && orderTrackingCodes?.length > 0 && (
-              <p className="text-gray-700">
-                {t("Total Parcels in Reestr")}: {orderTrackingCodes.length}
-              </p>
             )}
 
             <button

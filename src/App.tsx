@@ -7,6 +7,7 @@ import Reciept from "./pages/Reciept";
 import Sending from "./pages/Sending";
 import QRBarcodeScanner from "./components/Scanner";
 import OrderPage from "./pages/OrderPage";
+import RequestLog from "./pages/RequestLog";
 
 const defaultContextValue: ContextType = {
   userInfo: {},
@@ -25,7 +26,6 @@ const defaultContextValue: ContextType = {
   setAmount: () => {},
   activeButton: 0,
   setActiveButton: () => {},
-  
 };
 
 export const Context = createContext(defaultContextValue);
@@ -50,7 +50,7 @@ const App = () => {
       webApp.disableVerticalSwipes();
 
       console.log("Telegram WebApp Initialized:", webApp.initDataUnsafe);
-      const userId = webApp.initDataUnsafe?.user?.id;
+      const userId = webApp.initDataUnsafe?.user?.id ;
 
       if (userId) {
         setUserInfo((prev) => ({ ...prev, telegram_id: userId }));
@@ -86,6 +86,7 @@ const App = () => {
         <Route element={<Sending />} path="/sending" />
         <Route element={<QRBarcodeScanner />} path="/scanner" />
         <Route path="/order/:id" element={<OrderPage />} />
+        <Route element={<RequestLog />} path="/requestlog" />
       </Routes>
       {location.pathname.toLowerCase() === "/home" ||
       location.pathname.toLowerCase() === "/sending" ||
