@@ -136,7 +136,7 @@ const OrderPage = () => {
             </div>
           </div>
 
-          {order?.places ? (
+          {order?.with_places ? (
             <OrderWithComponents
               order={order}
               handleCheckboxChange={handleCheckboxChange}
