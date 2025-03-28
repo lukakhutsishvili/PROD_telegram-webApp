@@ -50,7 +50,7 @@ const App = () => {
       webApp.disableVerticalSwipes();
 
       console.log("Telegram WebApp Initialized:", webApp.initDataUnsafe);
-      const userId = webApp.initDataUnsafe?.user?.id || "6087086146";
+      const userId = webApp.initDataUnsafe?.user?.id || "6799118152";
 
       if (userId) {
         setUserInfo((prev) => ({ ...prev, telegram_id: userId }));
