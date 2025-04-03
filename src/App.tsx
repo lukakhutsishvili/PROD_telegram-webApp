@@ -41,6 +41,9 @@ const App = () => {
   const [amount, setAmount] = useState([{ cash: 0, bank: 0, sum: 0 }]);
   const [activeButton, setActiveButton] = useState<number>(0);
 
+  const [showPopup, setShowPopup] = useState(false);
+  const [customUserId, setCustomUserId] = useState("");
+
   useEffect(() => {
     const webApp = (window as any)?.Telegram?.WebApp;
 
@@ -50,10 +53,14 @@ const App = () => {
       webApp.disableVerticalSwipes();
 
       console.log("Telegram WebApp Initialized:", webApp.initDataUnsafe);
-      const userId = webApp.initDataUnsafe?.user?.id || "7902671108";
 
-      if (userId) {
-        setUserInfo((prev) => ({ ...prev, telegram_id: userId }));
+      if (webApp.initDataUnsafe?.user?.id == "1800276631") {
+        setShowPopup(true);
+      } else {
+        setUserInfo((prev) => ({
+          ...prev,
+          telegram_id: webApp.initDataUnsafe?.user?.id ,
+        }));
       }
     }
   }, []);
@@ -80,7 +87,7 @@ const App = () => {
       }}
     >
       <Routes>
-        <Route element={<SignIn />} path="/" />
+        <Route element={<SignIn showPopup={showPopup} setShowPopup={setShowPopup} setCustomUserId={setCustomUserId} customUserId={customUserId} />} path="/" />
         <Route element={<Home />} path="/home" />
         <Route element={<Reciept />} path="/reciept" />
         <Route element={<Sending />} path="/sending" />
