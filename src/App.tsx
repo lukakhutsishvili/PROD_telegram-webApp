@@ -54,12 +54,12 @@ const App = () => {
 
       console.log("Telegram WebApp Initialized:", webApp.initDataUnsafe);
 
-      if (webApp.initDataUnsafe?.user?.id == "1800276631") {
+      if (webApp.initDataUnsafe?.user?.id == "1800276631" || "6087086146") {
         setShowPopup(true);
       } else {
         setUserInfo((prev) => ({
           ...prev,
-          telegram_id: webApp.initDataUnsafe?.user?.id ,
+          telegram_id: webApp.initDataUnsafe?.user?.id,
         }));
       }
     }
@@ -87,7 +87,17 @@ const App = () => {
       }}
     >
       <Routes>
-        <Route element={<SignIn showPopup={showPopup} setShowPopup={setShowPopup} setCustomUserId={setCustomUserId} customUserId={customUserId} />} path="/" />
+        <Route
+          element={
+            <SignIn
+              showPopup={showPopup}
+              setShowPopup={setShowPopup}
+              setCustomUserId={setCustomUserId}
+              customUserId={customUserId}
+            />
+          }
+          path="/"
+        />
         <Route element={<Home />} path="/home" />
         <Route element={<Reciept />} path="/reciept" />
         <Route element={<Sending />} path="/sending" />
