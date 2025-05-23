@@ -118,5 +118,9 @@
   "Total Parcels in Register": "რეესტრში ამანათების რაოდენობა",
   "please scan all order": "გთხოვთ ჩაასკანეროთ ყველა კომპონენტი",
   "Error": "შეცდომა ",
-  "Enter order code manually": "შეიყვანეთ ამანათის კოდი"
+  "Enter order code manually": "შეიყვანეთ ამანათის კოდი",
+  "Success! Parcel processed.": "ამანათი წარმატებით დამუშავდა.",
+  "This Registry is already in tasks": "ეს რეესტრი უკვე არის დავალებებში",
+  "Failed to fetch details": "დეტალების დამუშავება ვერ მოხერხდა, სცადეთ ხელახლა."
+
 }
