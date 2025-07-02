@@ -8,6 +8,8 @@ import useClientConfirmation from "../hooks/confirm modal hooks/useClientConfirm
 import useRequestLogs from "../hooks/useRequestLogs";
 import ThirdPerson from "./ThirdPerson";
 import { Context } from "../App";
+import CustomDropdown from "./CustomDropDown";
+import ReturnDeclineModal from "./returnDeclineModal";
 
 interface ConfirmModalProps {
   closeModal: () => void;
@@ -34,6 +36,21 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   const PARCELS_KEY = "parcels";
   const storedParcels = JSON.parse(localStorage.getItem(PARCELS_KEY) || "[]");
   const order = sendingOrder || receiptOrder;
+  const [returnOrder, setReturnOrder] = useState<string>("");
+
+  const { userInfo } = useContext(Context);
+  const [returnedParcelError, setReturnedParcelError] = useState("");
+  
+  const [returnDeclineModalOpen, setReturnDeclineModalOpen] = useState(false);
+
+  const PARCEL_WITH_RETURN = order.parcel_with_return;
+  const PARCEL_WITHOUT_RETURN_BARCODE = order.parcel_with_return_barcode == "";
+
+  useEffect(() => {
+  if (PARCEL_WITHOUT_RETURN_BARCODE) {
+    setReturnOrder("no");
+  }
+}, [PARCEL_WITHOUT_RETURN_BARCODE]);
 
   const { addParcel } = useRequestLogs();
 
@@ -75,14 +92,19 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
     additionalComment,
     setAdditionalComment,
     openThirdPersonModal,
+    returnedParcel,
+    setSelectedReturnReason,
+    setSelectedReturnReasonText,
+    selectedReturnReason,
+    selectedReturnReasonText,
   } = useClientConfirmation(
     selectedOrders,
     totalSum,
     sendingOrder,
     receiptOrder,
-    selectedOrdersList
+    selectedOrdersList,
+    returnOrder,
   );
-
   const initialState = {
     otherClientName: "",
     otherClientSurname: "",
@@ -90,8 +112,6 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
     additionalComment,
   };
   const [errors, setErrors] = useState(initialState);
-  const { userInfo } = useContext(Context);
-
   const navigationfunction = () => {
     if (confirmationMessage) {
       if (sendingOrder) {
@@ -151,6 +171,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
   const onConfirm = async () => {
     setLoading(true);
+    setReturnedParcelError("");
     try {
       if (receiptOrder) {
         await confirmDelivery();
@@ -163,6 +184,11 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
         setConfirmationMessage(t("Receipt order confirmed!"));
         setStartTimer(true);
         await fetchUpdatedOrderList();
+      } else if (returnedParcel == true && returnOrder == "") {
+        setReturnedParcelError(
+          t("Please select if the parcel is returnable or not.")
+        );
+        return;
       } else if (confirmationMethod === "OTP") {
         try {
           await checkClientOtp();
@@ -332,7 +358,6 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
                         : t("Send OTP")}
                     </Button>
                   )}
-
                   {otpSent && (
                     <div className="text-green-500">{t("OTP Sent!")}</div>
                   )}
@@ -380,6 +405,31 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
                       otherPersonInfo={otherPersonInfo}
                     />
                   )}
+
+                  <div>
+                    {(PARCEL_WITH_RETURN && !PARCEL_WITHOUT_RETURN_BARCODE) && (
+                      <CustomDropdown
+                        returnOrder={returnOrder}
+                        setReturnOrder={setReturnOrder}
+                        returnedParcelError={returnedParcelError}
+                        setReturnDeclineModalOpen={setReturnDeclineModalOpen}
+                        setSelectedReturnReason={setSelectedReturnReason}
+                        setSelectedReturnReasonText={setSelectedReturnReasonText}
+                      />
+                    )}
+                    {returnDeclineModalOpen && (
+                      <ReturnDeclineModal
+                        setReturnDeclineModalOpen={setReturnDeclineModalOpen}
+                        selectedReturnReason={selectedReturnReason}
+                        setSelectedReturnReason={setSelectedReturnReason}
+                        selectedReturnReasonText={selectedReturnReasonText}
+                        setSelectedReturnReasonText={
+                          setSelectedReturnReasonText
+                        }
+                        setReturnOrder={setReturnOrder}
+                      />
+                    )}
+                  </div>
                 </div>
               </>
             )}

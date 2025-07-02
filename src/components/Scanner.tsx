@@ -77,7 +77,7 @@ const BarcodeScanner = () => {
     try {
       setIsLoading(true);
       const requestData = {
-        device_id: userInfo.device_id ,
+        device_id: userInfo.device_id,
         tracking_code: trackingCode,
       };
 
@@ -122,16 +122,17 @@ const BarcodeScanner = () => {
         setSecRes(secResponse);
         setScannerError("");
       } else if (status === "Accepted") {
-        setScannerError("This reestr is already in tasks");
+        setScannerError(t("This Registry is already in tasks"));
       } else {
         setScannerError("Unexpected status: " + status);
       }
+      setIsModalOpen(true); // Open the modal after processing the request
     } catch (error) {
       console.error("Error fetching barcode details:", error);
-      setScannerError("Failed to fetch details");
+      setScannerError(t("Failed to fetch details"));
+      setIsModalOpen(true); // Open the modal even if there's an error
     } finally {
       setIsLoading(false);
-      console.log(orderTrackingCodes);
     }
   };
 
