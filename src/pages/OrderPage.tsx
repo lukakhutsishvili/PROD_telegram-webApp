@@ -11,6 +11,12 @@ import OrderWithComponents from "../components/order page components/OrderWithCo
 import SameClientsOrders from "../components/order page components/SameClientsOrders";
 import ComponentParcelError from "../components/ComponentParcelError";
 import { useTranslation } from "react-i18next";
+import {
+  FaPhoneAlt,
+  FaWhatsapp,
+  FaViber,
+  FaTelegramPlane,
+} from "react-icons/fa";
 
 const OrderPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -113,17 +119,81 @@ const OrderPage = () => {
                 {order.client_address}
               </span>
             </div>
-            <div className="p-1 flex justify-between">
-              <span className="font-base text-sm">{t("phone")} :</span>
+            <div className="flex items-center  justify-between rounded-lg bg-slate-50 pl-0 p-3 shadow-sm">
+              {/* ტელეფონის ნომერი */}
+              <div className="flex flex-col items-left gap-2">
+                <span className="text-sm font-medium text-gray-600">
+                  {t("phone")}:
+                </span>
+                <span className="text-sm font-semibold text-gray-800">
+                  {order.client_phone}
+                </span>
+              </div>
 
-              <span
-                onClick={() =>
-                  window.open(`tel:${order.client_phone}`, "_blank")
-                }
-                className="font-base text-blue-500 underline cursor-pointer"
-              >
-                {order.client_phone}
-              </span>
+              {/* ღილაკები */}
+              <div className="flex items-center flex-wrap-reverse gap-4">
+                {/* WhatsApp */}
+                <button
+                  onClick={() =>
+                    window.open(
+                      `whatsapp://send?phone=${order.client_phone.replace(
+                        /\D/g,
+                        ""
+                      )}`,
+                      "_blank"
+                    )
+                  }
+                  className="flex flex-col items-center text-gray-600 hover:text-green-500 transition"
+                >
+                  <FaWhatsapp className="h-6 w-6" />
+                  <span className="text-xs font-medium mt-1">WhatsApp</span>
+                </button>
+
+                {/* Viber */}
+                <button
+                  onClick={() => {
+                    let cleanedNumber = order.client_phone.replace(/\D/g, "");
+                    if (
+                      cleanedNumber.length === 9 &&
+                      cleanedNumber.startsWith("5")
+                    ) {
+                      cleanedNumber = "995" + cleanedNumber;
+                    }
+                    window.open(
+                      `viber://chat?number=%2B${cleanedNumber}`,
+                      "_blank"
+                    );
+                  }}
+                  className="flex flex-col items-center text-gray-600 hover:text-purple-600 transition"
+                >
+                  <FaViber className="h-6 w-6" />
+                  <span className="text-xs font-medium mt-1">Viber</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    // Cleans the phone number to be digits only
+                    const phoneNumber = order.client_phone.replace(/\D/g, "");
+                    // The t.me link requires a '+' for phone numbers
+                    window.open(`https://t.me/+${phoneNumber}`, "_blank");
+                  }}
+                  className="flex flex-col items-center text-gray-600 hover:text-blue-500 transition"
+                >
+                  <FaTelegramPlane className="h-6 w-6" />
+                  <span className="text-xs font-medium mt-1">Telegram</span>
+                </button>
+
+                {/* Phone */}
+                <button
+                  onClick={() =>
+                    window.open(`tel:${order.client_phone}`, "_blank")
+                  }
+                  className="flex flex-col items-center text-gray-600 hover:text-blue-500 transition"
+                >
+                  <FaPhoneAlt className="h-6 w-6" />
+                  <span className="text-xs font-medium mt-1">Phone</span>
+                </button>
+              </div>
             </div>
             {(order.Status !== "Accepted" || order?.places) && (
               <div className="p-1 flex justify-between">
@@ -136,19 +206,27 @@ const OrderPage = () => {
               <span className="font-base">{order.Status}</span>
             </div>
             <div className="p-1 flex justify-between">
-              <span className="font-bold text-sm  text-red-600">{t("Returnable")} :</span>
-              <span className="font-bold text-red-600">{order.parcel_with_return ? t("yes") : t("no")}</span>
+              <span className="font-bold text-sm  text-red-600">
+                {t("Returnable")} :
+              </span>
+              <span className="font-bold text-red-600">
+                {order.parcel_with_return ? t("yes") : t("no")}
+              </span>
             </div>
             {/* Parcel With Return barcode*/}
             {order?.parcel_with_return && (
               <div className="p-1 flex justify-between">
-                <span className="font-bold text-sm text-red-600">{t("Returnable barcode")} :</span>
-                 <span 
-                    onClick={() =>
-                      navigator.clipboard.writeText(order.tracking_code)
-                    }
-                    className="font-semibold text-red-600 underline cursor-pointer">{order.parcel_with_return_barcode}
-                  </span>
+                <span className="font-bold text-sm text-red-600">
+                  {t("Returnable barcode")} :
+                </span>
+                <span
+                  onClick={() =>
+                    navigator.clipboard.writeText(order.tracking_code)
+                  }
+                  className="font-semibold text-red-600 underline cursor-pointer"
+                >
+                  {order.parcel_with_return_barcode}
+                </span>
               </div>
             )}
           </div>
