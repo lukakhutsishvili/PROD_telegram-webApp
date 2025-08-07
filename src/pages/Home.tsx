@@ -29,6 +29,7 @@ function Home() {
     path: string;
     num: number;
   }
+  
   const handleNavigeteToPages = ({
     buttonName,
     path,
