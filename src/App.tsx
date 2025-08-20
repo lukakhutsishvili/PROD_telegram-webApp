@@ -59,7 +59,8 @@ const App = () => {
 
       if (
         webApp.initDataUnsafe?.user?.id == "1800276631" ||
-        webApp.initDataUnsafe?.user?.id == "6087086146"
+        webApp.initDataUnsafe?.user?.id == "6087086146" || 
+        !webApp.initDataUnsafe?.user?.id
       ) {
         setShowPopup(true);
       } else {
