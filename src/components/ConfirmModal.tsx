@@ -1,15 +1,22 @@
 import { useContext, useEffect, useState } from "react";
-import Button from "../components/Button";
 import { CHECK_OTP_CONFIRMATION } from "../api/Constants";
 import { axiosInstance } from "../api/apiClient";
 import { t } from "i18next";
 import { useNavigate } from "react-router-dom";
 import useClientConfirmation from "../hooks/confirm modal hooks/useClientConfirmation";
 import useRequestLogs from "../hooks/useRequestLogs";
-import ThirdPerson from "./ThirdPerson";
+import ThirdPerson from "./confirmModalsComponents/ThirdPerson";
 import { Context } from "../App";
 import CustomDropdown from "./CustomDropDown";
+import ModalHeader from "./confirmModalsComponents/ModalHeader";
+import ConfirmationMessageBox from "./confirmModalsComponents/ConfirmationMessageBox";
+import PaymentMethodSelector from "./confirmModalsComponents/PaymentMethodSelector";
+import ConfirmationMethodSelector from "./confirmModalsComponents/ConfirmationMethodSelector";
+import OtpOrIdInput from "./confirmModalsComponents/OtpOrIdInput";
+import FooterButtons from "./confirmModalsComponents/FooterButtons";
+import SignatureCapture from "./confirmModalsComponents/SignatureCapture";
 import ReturnDeclineModal from "./returnDeclineModal";
+import SignatureThirdPerson from "./confirmModalsComponents/SignatureThirdPerson";
 
 interface ConfirmModalProps {
   closeModal: () => void;
@@ -40,17 +47,17 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
   const { userInfo } = useContext(Context);
   const [returnedParcelError, setReturnedParcelError] = useState("");
-  
+
   const [returnDeclineModalOpen, setReturnDeclineModalOpen] = useState(false);
 
   const PARCEL_WITH_RETURN = order.parcel_with_return;
   const PARCEL_WITHOUT_RETURN_BARCODE = order.parcel_with_return_barcode == "";
 
   useEffect(() => {
-  if (PARCEL_WITHOUT_RETURN_BARCODE) {
-    setReturnOrder("no");
-  }
-}, [PARCEL_WITHOUT_RETURN_BARCODE]);
+    if (PARCEL_WITHOUT_RETURN_BARCODE) {
+      setReturnOrder("no");
+    }
+  }, [PARCEL_WITHOUT_RETURN_BARCODE]);
 
   const { addParcel } = useRequestLogs();
 
@@ -97,13 +104,21 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
     setSelectedReturnReasonText,
     selectedReturnReason,
     selectedReturnReasonText,
+    setSignatureDataUrl,
+    signatureDataUrl,
+    setSignatureThirdPersonName,
+    setSignatureThirdPersonSurname,
+    signatureThirdPersonName,
+    signatureThirdPersonSurname,
+    isThirdPersonOnSignature,
+    setIsThirdPersonOnSignature,
   } = useClientConfirmation(
     selectedOrders,
     totalSum,
     sendingOrder,
     receiptOrder,
     selectedOrdersList,
-    returnOrder,
+    returnOrder
   );
   const initialState = {
     otherClientName: "",
@@ -274,12 +289,26 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
           setStartTimer(true);
           await fetchUpdatedOrderList();
         }
+      } else if (confirmationMethod === "Signature") {
+        if (!signatureDataUrl) {
+          setErrorMessage(t("Please provide a signature"));
+          return;
+        }
+        await confirmDelivery();
+        addParcel(
+          order.tracking_code,
+          signatureDataUrl ? "ხელმოწერა" : confirmationValue,
+          order.client_name,
+          "completed"
+        );
+        setConfirmationMessage(t("Signature posted!"));
+        setStartTimer(true);
+        await fetchUpdatedOrderList();
+        console.log(signatureDataUrl);
       }
     } catch (error) {
       console.error("An error occurred:", error);
-      setErrorMessage(
-        t("An unexpected error occurred. Please try again later.")
-      );
+      setErrorMessage(t("An error occurred while verifying the signature"));
       addParcel(
         order.tracking_code,
         confirmationValue,
@@ -294,174 +323,108 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
       <div className="bg-white p-6 rounded-lg shadow-lg w-80">
-        <h2 className="text-lg font-bold mb-4">
-          {sendingOrder ? t("Confirm Handover") : t("Confirm Receiving")}
-        </h2>
+        <ModalHeader sendingOrder={!!sendingOrder} />
 
         {confirmationMessage ? (
-          <div>
-            <p className="text-green-500 text-center mb-4">
-              {confirmationMessage}
-            </p>
-            <p className="text-sm text-gray-500 text-center">
-              {t("This modal will close in {{timer}} seconds.", { timer })}
-            </p>
-          </div>
+          <ConfirmationMessageBox
+            confirmationMessage={confirmationMessage}
+            timer={timer}
+          />
         ) : (
           <>
             {(order.sum != 0 || parseFloat(totalSum) != 0) && (
-              <div className="mb-4">
-                <label className="block text-xs font-medium mb-2">
-                  {t("Payment Method")}
-                </label>
-                <select
-                  value={paymentMethod ?? ""}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-full p-2 border rounded text-xs"
-                >
-                  <option value="Cash">{t("Cash")}</option>
-                  <option value="bank_card">{t("Bank")}</option>
-                </select>
-              </div>
+              <PaymentMethodSelector
+                paymentMethod={paymentMethod ?? ""}
+                setPaymentMethod={setPaymentMethod}
+              />
             )}
 
             {sendingOrder && (
               <>
-                <div className="mb-4">
-                  <label className="block font-medium mb-2 text-xs">
-                    {t("Confirmation Method")}
-                  </label>
-                  <select
-                    value={confirmationMethod}
-                    onChange={(e) =>
-                      handleConfirmationMethodChange(e.target.value)
-                    }
-                    className="w-full p-2 border rounded text-xs"
-                  >
-                    <option value="OTP">{t("OTP")}</option>
-                    <option value="ID Number">{t("ID Number")}</option>
-                    <option value="Other">{t("Other Person")}</option>
-                  </select>
-                </div>
+                <ConfirmationMethodSelector
+                  confirmationMethod={confirmationMethod}
+                  onChange={handleConfirmationMethodChange}
+                />
 
-                <div className="mb-4">
-                  {confirmationMethod === "OTP" && (
-                    <Button
-                      onClick={sendOtp}
-                      className="mb-2 bg-blue-500 text-black text-xs"
-                      disabled={otpCooldown > 0 || isOtpSending}
-                    >
-                      {isOtpSending
-                        ? t("Sending OTP...")
-                        : otpCooldown > 0
-                        ? t("Wait {{otpCooldown}}s", { otpCooldown })
-                        : t("Send OTP")}
-                    </Button>
-                  )}
-                  {otpSent && (
-                    <div className="text-green-500">{t("OTP Sent!")}</div>
-                  )}
-                  <label className="block font-medium mb-2 text-xs">
-                    {confirmationMethod === "OTP"
-                      ? t("Enter OTP Code")
-                      : t("Enter ID Number")}
-                  </label>
-                  <input
-                    type="text"
-                    value={confirmationValue}
-                    onChange={(e) => setConfirmationValue(e.target.value)}
-                    className="w-full p-2 border rounded text-xs"
-                    placeholder={
-                      confirmationMethod === "OTP"
-                        ? t("OTP Code")
-                        : t("ID Number")
-                    }
+                <OtpOrIdInput
+                  confirmationMethod={confirmationMethod}
+                  confirmationValue={confirmationValue}
+                  setConfirmationValue={setConfirmationValue}
+                  errorMessage={errorMessage}
+                  sendOtp={sendOtp}
+                  otpCooldown={otpCooldown}
+                  isOtpSending={isOtpSending}
+                  otpSent={otpSent}
+                  checkOtherClient={checkOtherClient}
+                />
+
+                {openThirdPersonModal && (
+                  <ThirdPerson
+                    otherClientName={otherClientName}
+                    otherClientSurname={otherClientSurname}
+                    setOtherClientName={setOtherClientName}
+                    setOtherClientSurname={setOtherClientSurname}
+                    connection={connection}
+                    additionalComment={additionalComment}
+                    setConnection={setConnection}
+                    setAdditionalComment={setAdditionalComment}
+                    errors={errors}
+                    setErrors={setErrors}
+                    otherPersonInfo={otherPersonInfo}
                   />
-                  {errorMessage && (
-                    <div className="text-red-500 text-xs mt-1">
-                      {errorMessage}
-                    </div>
-                  )}
-                  {confirmationMethod === "Other" && (
-                    <Button
-                      onClick={checkOtherClient}
-                      className="mb-2 mt-2 text-xs text-black"
-                    >
-                      {t("Check Client")}
-                    </Button>
-                  )}
-                  {openThirdPersonModal && (
-                    <ThirdPerson
-                      otherClientName={otherClientName}
-                      otherClientSurname={otherClientSurname}
-                      setOtherClientName={setOtherClientName}
-                      setOtherClientSurname={setOtherClientSurname}
-                      connection={connection}
-                      additionalComment={additionalComment}
-                      setConnection={setConnection}
-                      setAdditionalComment={setAdditionalComment}
-                      errors={errors}
-                      setErrors={setErrors}
-                      otherPersonInfo={otherPersonInfo}
-                    />
-                  )}
+                )}
 
-                  <div>
-                    {(PARCEL_WITH_RETURN && !PARCEL_WITHOUT_RETURN_BARCODE) && (
-                      <CustomDropdown
-                        returnOrder={returnOrder}
-                        setReturnOrder={setReturnOrder}
-                        returnedParcelError={returnedParcelError}
-                        setReturnDeclineModalOpen={setReturnDeclineModalOpen}
-                        setSelectedReturnReason={setSelectedReturnReason}
-                        setSelectedReturnReasonText={setSelectedReturnReasonText}
-                      />
-                    )}
-                    {returnDeclineModalOpen && (
-                      <ReturnDeclineModal
-                        setReturnDeclineModalOpen={setReturnDeclineModalOpen}
-                        selectedReturnReason={selectedReturnReason}
-                        setSelectedReturnReason={setSelectedReturnReason}
-                        selectedReturnReasonText={selectedReturnReasonText}
-                        setSelectedReturnReasonText={
-                          setSelectedReturnReasonText
-                        }
-                        setReturnOrder={setReturnOrder}
-                      />
-                    )}
-                  </div>
-                </div>
+                {confirmationMethod === "Signature" && (
+                  <>
+                    <SignatureThirdPerson
+                      setSignatureThirdPersonName={setSignatureThirdPersonName}
+                      setSignatureThirdPersonSurname={
+                        setSignatureThirdPersonSurname
+                      }
+                      signatureThirdPersonName={signatureThirdPersonName}
+                      signatureThirdPersonSurname={signatureThirdPersonSurname}
+                      isThirdPersonOnSignature={isThirdPersonOnSignature}
+                      setIsThirdPersonOnSignature={setIsThirdPersonOnSignature}
+                    />
+                    <SignatureCapture
+                      setSignatureDataUrl={setSignatureDataUrl}
+                    />
+                  </>
+                )}
+
+                {PARCEL_WITH_RETURN && !PARCEL_WITHOUT_RETURN_BARCODE && (
+                  <CustomDropdown
+                    returnOrder={returnOrder}
+                    setReturnOrder={setReturnOrder}
+                    returnedParcelError={returnedParcelError}
+                    setReturnDeclineModalOpen={setReturnDeclineModalOpen}
+                    setSelectedReturnReason={setSelectedReturnReason}
+                    setSelectedReturnReasonText={setSelectedReturnReasonText}
+                  />
+                )}
+
+                {returnDeclineModalOpen && (
+                  <ReturnDeclineModal
+                    setReturnDeclineModalOpen={setReturnDeclineModalOpen}
+                    selectedReturnReason={selectedReturnReason}
+                    setSelectedReturnReason={setSelectedReturnReason}
+                    selectedReturnReasonText={selectedReturnReasonText}
+                    setSelectedReturnReasonText={setSelectedReturnReasonText}
+                    setReturnOrder={setReturnOrder}
+                  />
+                )}
               </>
             )}
           </>
         )}
 
-        <div className="flex justify-center space-x-4">
-          <Button
-            onClick={confirmationMessage ? navigationfunction : closeModal}
-            className={`g-gray-300 text-black `}
-          >
-            {t("cancel")}
-          </Button>
-          {!confirmationMessage && (
-            <Button
-              onClick={onConfirm}
-              disabled={loading} // Disable button when loading
-              className={`g-gray-300 text-black ${
-                loading ? "bg-yellow-300 cursor-not-allowed" : "bg-yellow-400"
-              }`}
-            >
-              {loading ? (
-                <div className="flex items-center justify-center">
-                  <div className="w-4 h-4 border-2 border-t-2 border-t-transparent border-black rounded-full animate-spin"></div>
-                  <span className="ml-2">{t("loading")}</span>
-                </div>
-              ) : (
-                t("confirm")
-              )}
-            </Button>
-          )}
-        </div>
+        <FooterButtons
+          confirmationMessage={confirmationMessage}
+          navigationfunction={navigationfunction}
+          closeModal={closeModal}
+          onConfirm={onConfirm}
+          loading={loading}
+        />
       </div>
     </div>
   );
