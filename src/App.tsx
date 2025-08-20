@@ -9,6 +9,8 @@ import QRBarcodeScanner from "./components/Scanner";
 import OrderPage from "./pages/OrderPage";
 import RequestLog from "./pages/RequestLog";
 
+
+
 const defaultContextValue: ContextType = {
   userInfo: {},
   setUserInfo: () => {},
@@ -27,6 +29,7 @@ const defaultContextValue: ContextType = {
   activeButton: 0,
   setActiveButton: () => {},
 };
+
 
 export const Context = createContext(defaultContextValue);
 
