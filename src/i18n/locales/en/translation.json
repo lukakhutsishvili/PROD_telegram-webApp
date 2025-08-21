@@ -1,7 +1,6 @@
 {
   "General Information": "General Information",
   "Cash": "Cash",
-  "Cash2": "Cash",
   "Bank": "Bank",
   "Total Amount": "Total Amount",
   "Receipt orders": "Receipt orders",
@@ -128,20 +127,5 @@
   "Returnable barcode": "Returnable barcode",
   "yes": "Yes",
   "no": "No",
-  "Please select if the parcel is returnable or not.": "Please select if the parcel is returnable or not.",
-  "Other Person":"Other Person",
-  "Signature":"Signature",
-  "Sign_it": "Sign it",
-  "Clear":"Clear",
-  "Save":"Save",
-  "Please provide a signature":"Please provide a signature.",
-  "Please provide a signature before saving": "Please provide a signature before saving",
-  "Signature saved successfully":"Signature saved successfully",
-  "An error occurred while verifying the signature":"An error occurred while verifying the signature",
-  "Signature posted!": "Signature posted!",
-  "Sign as third person": "Sign as third person",
-  "full_name": "Full Name",
-  "full_Surname": "Full Surname",
-  "This message will disappear in": "This message will disappear in",
-  "seconds": "seconds"
+  "Please select if the parcel is returnable or not.": "Please select if the parcel is returnable or not."
 }

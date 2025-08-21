@@ -5,7 +5,6 @@ const useOrder = (
   selectedOrdersList: {
     tracking_code: string;
     sum: number;
-    sumcash?: number;
     places?: { tracking_code: string; sum: number }[];
   }[]
 ) => {
@@ -51,23 +50,13 @@ const useOrder = (
     }));
   };
 
-  const allOrders: { tracking_code: string; sum: number; sumcash?: number }[] = selectedOrdersList.flatMap((order) =>
-    order.places && order.places.length > 0
-      ? order.places.map((place) => ({
-          ...place,
-          sumcash: order.sumcash, 
-        }))
-      : [order]
+  const allOrders = selectedOrdersList.flatMap((order) =>
+    order.places && order.places.length > 0 ? order.places : [order]
   );
 
   const totalSum = matchedOrder ? matchedOrder.sum :  allOrders
     .filter((order) => selectedOrders[order.tracking_code])
     .reduce((sum, order) => sum + order.sum, 0)
-    .toFixed(2) ;
-
-  const totalSumCash = matchedOrder ? matchedOrder.sumcash :  allOrders
-    .filter((order) => selectedOrders[order.tracking_code])
-    .reduce((sum, order) => sum + (order.sumcash ?? 0), 0)
     .toFixed(2) ;
 
   const totalQuantity = allOrders.filter(
@@ -78,7 +67,6 @@ const useOrder = (
     selectedOrders,
     setSelectedOrders,
     totalSum,
-    totalSumCash,
     totalQuantity,
     handleCheckboxChange,
   };
