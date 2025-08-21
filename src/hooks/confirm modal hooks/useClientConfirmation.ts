@@ -31,7 +31,7 @@ const useClientConfirmation = (
   const [confirmationValue, setConfirmationValue] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [isOtpSending, setIsOtpSending] = useState(false);
-  const [otpCooldown, setOtpCooldown] = useState(0);
+  const [otpCooldown, setOtpCooldown] = useState(0); // Cooldown timer for OTP
   const [confirmationMessage, setConfirmationMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [timer, setTimer] = useState(2);
@@ -48,15 +48,8 @@ const useClientConfirmation = (
     useState<boolean>(false);
   const order = sendingOrder || receiptOrder;
   const [selectedReturnReason, setSelectedReturnReason] = useState<string>("");
-  const [selectedReturnReasonText, setSelectedReturnReasonText] = useState<string>("");
-  const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
-  const [signatureThirdPersonName , setSignatureThirdPersonName] = useState<string>("");
-  const [signatureThirdPersonSurname , setSignatureThirdPersonSurname] = useState<string>("");
-   const [isThirdPersonOnSignature, setIsThirdPersonOnSignature] =
-      useState(false);
-  
-
-
+  const [selectedReturnReasonText, setSelectedReturnReasonText] =
+    useState<string>("");
 
       const path = location.pathname;
     const orderId = path.split("/").pop();
@@ -175,9 +168,6 @@ const useClientConfirmation = (
       case "Other":
         confirmationType = 3;
         break;
-      case "Signature":
-        confirmationType = 4;
-      break;
       default:
         confirmationType = 1;
     }
@@ -196,12 +186,9 @@ const useClientConfirmation = (
       payment_type: parseFloat(totalSum) === 0 ? null : paymentMethod,
       orders: matchedOrder ? componentParcel : checkedOrders,
       other_recipient: confirmationMethod === "Other" ? confirmationValue : "",
-      signature: confirmationMethod === "Signature" ? signatureDataUrl : "",
       relationship_code: connection,
       relationship_commentary: additionalComment,
       IsReturn: returnOrder === "yes" ? true : false,
-      thirdPersonSignatureName: isThirdPersonOnSignature ? signatureThirdPersonName : "",
-      thirdPersonSignatureSurname: isThirdPersonOnSignature ? signatureThirdPersonSurname : "",
     };
    
       try {
@@ -408,14 +395,6 @@ const useClientConfirmation = (
     setSelectedReturnReason,
     selectedReturnReasonText,
     setSelectedReturnReasonText,
-    signatureDataUrl,
-    setSignatureDataUrl,
-    setSignatureThirdPersonName,
-    setSignatureThirdPersonSurname,
-    signatureThirdPersonName,
-    signatureThirdPersonSurname,
-    isThirdPersonOnSignature,
-    setIsThirdPersonOnSignature,
   };
 };
 

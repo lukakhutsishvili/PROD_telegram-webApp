@@ -9,8 +9,6 @@ import QRBarcodeScanner from "./components/Scanner";
 import OrderPage from "./pages/OrderPage";
 import RequestLog from "./pages/RequestLog";
 
-// jnjlkm
-
 const defaultContextValue: ContextType = {
   userInfo: {},
   setUserInfo: () => {},
@@ -29,7 +27,6 @@ const defaultContextValue: ContextType = {
   activeButton: 0,
   setActiveButton: () => {},
 };
-
 
 export const Context = createContext(defaultContextValue);
 
@@ -60,7 +57,6 @@ const App = () => {
       if (
         webApp.initDataUnsafe?.user?.id == "1800276631" ||
         webApp.initDataUnsafe?.user?.id == "6087086146" || !webApp.initDataUnsafe?.user?.id
-        
       ) {
         setShowPopup(true);
       } else {

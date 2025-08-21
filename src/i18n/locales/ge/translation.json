@@ -1,7 +1,6 @@
 {
   "General Information": "ზოგადი ინფორმაცია",
   "Cash": "ნაღდი ფული",
-  "Cash2": "ნაღდი",
   "Bank": "ბარათი",
   "Total Amount": "ჯამური თანხა",
   "Receipt orders": "შეკვეთების გამოტანა",
@@ -128,20 +127,6 @@
   "Returnable barcode": "დაბრუნების კოდი",
   "yes": "დიახ",
   "no": "არა",
-  "Please select if the parcel is returnable or not.": "გთხოვთ, აირჩიოთ, არის თუ არა ამანათი დასაბრუნებელი.",
-  "Other Person": "მესამე პირი",
-  "Signature": "ხელმოწერა",
-  "Sign_it": "მოაწერეთ ხელი",
-  "Clear": "გასუფთავება",
-  "Save": "შენახვა",
-  "Please provide a signature": "გთხოვთ, მოაწეროთ ხელი.",
-  "Please provide a signature before saving": "შენახვამდე გთხოვთ, მოაწეროთ ხელი",
-  "Signature saved successfully": "ხელმოწერა წარმატებით შეინახა",
-  "An error occurred while verifying the signature": "შეცდომა მოხდა ხელმოწერის გადამოწმებისას",
-  "Signature posted!": "ხელმოწერა დადასტურდა!",
-  "Sign as third person": "ხელმოწერა მესამე პირისთვის",
-  "full_name": "სრული სახელი",
-  "full_Surname": "სრული გვარი",
-  "This message will disappear in": "ეს შეტყობინება გაქრება",
-  "seconds": "წამში"
+  "Please select if the parcel is returnable or not.": "გთხოვთ, აირჩიოთ, არის თუ არა ამანათი დასაბრუნებელი."
+
 }
