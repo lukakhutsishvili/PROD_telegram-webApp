@@ -1,6 +1,7 @@
 {
   "General Information": "Общая информация",
   "Cash": "Наличные",
+  "Cash2": "Наличные",
   "Bank": "Карта",
   "Total Amount": "Общая сумма",
   "Receipt orders": "Заказы на получение",
@@ -127,5 +128,20 @@
   "Returnable barcode": "Штрихкод возврата",
   "yes": "Да",
   "no": "Нет",
-  "Please select if the parcel is returnable or not.": "Пожалуйста, выберите, подлежит ли посылка возврату или нет."
+  "Please select if the parcel is returnable or not.": "Пожалуйста, выберите, подлежит ли посылка возврату или нет.",
+  "Other Person": "Другое лицо",
+  "Signature": "Подпись",
+  "Sign_it": "Подпишите",
+  "Clear": "Очистить",
+  "Save": "Сохранить",
+  "Please provide a signature": "Пожалуйста, предоставьте подпись.",
+  "Please provide a signature before saving": "Пожалуйста, предоставьте подпись перед сохранением",
+  "Signature saved successfully": "Подпись успешно сохранена",
+  "An error occurred while verifying the signature": "Произошла ошибка при проверке подписи",
+  "Signature posted!": "Подпись отправлена!",
+  "Sign as third person": "Подпишите от третьего лица",
+  "full_name": "Полное имя",
+  "full_Surname": "Полная фамилия",
+  "This message will disappear in": "Это сообщение исчезнет через",
+  "seconds": "секунд"
 }
