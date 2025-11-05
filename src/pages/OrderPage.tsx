@@ -17,6 +17,8 @@ import {
   FaViber,
   FaTelegramPlane,
 } from "react-icons/fa";
+import { Order } from "../types/order";
+// import FloorDeliverySelector from "../components/order page components/FloorDeliverySelector";
 
 const OrderPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -61,7 +63,7 @@ const OrderPage = () => {
   const orderId = path.split("/").pop();
 
   const matchedOrder = selectedOrdersList.find(
-    (order: any) =>
+    (order: Order) => 
       order.tracking_code === orderId && order.places && order.places.length > 0
   );
   const allTrue = Object.values(selectedOrders).every(
@@ -71,6 +73,7 @@ const OrderPage = () => {
   const handleScanerChange = () => {
     setIsScanning(!isScanning);
   };
+
 
   return (
     <div className="min-h-screen bg-white px-4 pt-24 h-sm:pt-12">
@@ -253,6 +256,25 @@ const OrderPage = () => {
                 </span>
               </div>
             )}
+            {order?.HeavyWeight && (
+              <div className="p-1 flex justify-between">
+                <span className="font-bold text-sm text-blue-600">
+                  {t("Floordelivery")} :
+                </span>
+                <span
+                  onClick={() =>
+                    navigator.clipboard.writeText(order.tracking_code)
+                  }
+                  className="font-semibold text-blue-600"
+                >
+                  {order.HeavyWeight ? t("yes") : t("no")}
+                </span>
+              </div>
+            )}
+            {/* {order?.HeavyWeight && (
+              <FloorDeliverySelector order={order}/>
+            )}
+             */}
           </div>
 
           {order?.with_places ? (
